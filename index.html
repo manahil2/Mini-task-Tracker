@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Task Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+
+<center><h1>Mini Task Tracker</h1></center>
+<div id="auth">
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <br><br>
+  <button onclick="login()">Login</button>
+  <button onclick="register()">Register</button>
+  <p id="error" style="color:red;"></p>
+</div>
+<div id="task-board" style="display:none;">
+    <div class="top-bar">
+      <h2>Welcome! 🎯</h2>
+      <button class="btn btn-logout" onclick="logout()">Logout</button>
+    </div>
+  
+    <div class="task-creator">
+      <h3>Create New Task</h3>
+      <div class="task-form">
+        <input id="task-title" placeholder="Task Title">
+        <input id="assigned-to" placeholder="Assigned To">
+        <input id="task-desc" placeholder="Task Description">
+        <input id="due-date" type="date">
+        <select id="priority">
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+        </select>
+        <button onclick="createTask()">➕ Add Task</button>
+      </div>
+    </div>
+  
+    <!-- <div class="search-container">
+        <input type="text" id="search" placeholder="Search tasks..." onkeyup="searchTasks()">
+    </div> -->
+    
+
+    <h3 style="margin-top:2rem;">Tasks Board</h3>
+    <div class="search-container">
+        <input type="text" id="search" placeholder="Search tasks..." onkeyup="searchTasks()">
+    </div> 
+    <div class="board">
+      <div class="column" id="todo">
+        <div class="column-header todo-header">To Do</div>
+      </div>
+      <div class="column" id="inprogress">
+        <div class="column-header inprogress-header">In Progress</div>
+      </div>
+      <div class="column" id="done">
+        <div class="column-header done-header">Done</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
