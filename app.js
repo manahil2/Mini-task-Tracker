@@ -1,3 +1,5 @@
+let taskUnsubscribe = null; 
+
 window.addEventListener("DOMContentLoaded", () => {
   const loginHeading = document.getElementById("login-heading");
   const authSection = document.getElementById("auth");
@@ -22,15 +24,25 @@ function register() {
     .then(() => {
       errorElement.style.color = "green";
       errorElement.innerText = "Registered successfully!";
-
       document.getElementById("auth").style.display = "none";
       document.getElementById("task-board").style.display = "block";
-
       document.getElementById("login-heading").style.display = "none";
     })
     .catch((error) => {
       errorElement.style.color = "red";
-      errorElement.innerText = error.message;
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          errorElement.innerText = "This email is already registered. Try logging in.";
+          break;
+        case "auth/invalid-email":
+          errorElement.innerText = "Invalid email format.";
+          break;
+        case "auth/weak-password":
+          errorElement.innerText = "Password should be at least 6 characters.";
+          break;
+        default:
+          errorElement.innerText = error.message; // fallback
+      }
     });
 }
 
@@ -71,9 +83,18 @@ function login() {
 }
 
 // Logout
+// function logout() {
+//   auth.signOut();
+// }
 function logout() {
-  auth.signOut();
+  auth.signOut().then(() => {
+    if (taskUnsubscribe) {
+      taskUnsubscribe(); // Stop listening to old user's tasks
+      taskUnsubscribe = null;
+    }
+  });
 }
+
 auth.onAuthStateChanged((user) => {
   const loginHeading = document.getElementById("login-heading");
   const authSection = document.getElementById("auth");
@@ -94,37 +115,58 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Create Task
+//Create Task
 function createTask() {
   const title = document.getElementById("task-title").value;
   const assignedTo = document.getElementById("assigned-to").value;
   const description = document.getElementById("task-desc").value;
   const dueDate = document.getElementById("due-date").value;
   const priority = document.getElementById("priority").value;
+  
+  if (!title || !assignedTo || !description) {
+    alert("Please fill in title, assigned person, and description.");
+    return;
+  }
 
-  db.collection("tasks")
-    .add({
-      title,
-      description,
-      assignedTo,
-      status: "To Do",
-      dueDate,
-      priority,
-      createdAt: new Date(),
-    })
-    .then(() => {
-      document.getElementById("task-title").value = "";
-      document.getElementById("assigned-to").value = "";
-      document.getElementById("task-desc").value = "";
-      document.getElementById("due-date").value = "";
-      document.getElementById("priority").value = "Low";
-    });
+const user = auth.currentUser;
+db.collection("tasks")
+  .add({
+    title,
+    description,
+    assignedTo,
+    status: "To Do",
+    dueDate,
+    priority,
+    createdAt: firebase.firestore.Timestamp.now(),
+    userId: user.uid,
+  })
+  .then((docRef) => {
+    console.log("✅ Task created with ID: ", docRef.id);
+    alert("Task created successfully");
+
+    // clear form
+    document.getElementById("task-title").value = "";
+    document.getElementById("assigned-to").value = "";
+    document.getElementById("task-desc").value = "";
+    document.getElementById("due-date").value = "";
+    document.getElementById("priority").value = "Low";
+  })
+  .catch((error) => {
+    console.error("❌ Error creating task:", error);
+    alert("Error creating task: " + error.message);
+  });
+
 }
-
-// Load and Render Tasks
 function loadTasks() {
-  db.collection("tasks")
-    .orderBy("createdAt")
+  if (taskUnsubscribe) {
+    taskUnsubscribe();
+  }
+
+  const user = auth.currentUser;
+
+  taskUnsubscribe = db
+    .collection("tasks")
+    .where("userId", "==", user.uid) s
     .onSnapshot((snapshot) => {
       let tasks = [];
       snapshot.forEach((doc) => {
@@ -133,6 +175,8 @@ function loadTasks() {
       renderTasks(tasks);
     });
 }
+
+
 
 // Render Tasks into Columns
 function renderTasks(tasks) {
@@ -183,10 +227,15 @@ function renderTasks(tasks) {
           </button>
         </div>
       `;
+    const columnId = task.status?.toLowerCase().replace(" ", "");
+const column = document.getElementById(columnId);
 
-    document
-      .getElementById(task.status.toLowerCase().replace(" ", ""))
-      .appendChild(div);
+if (column) {
+  column.appendChild(div);
+} else {
+  console.warn("⚠️ Column not found for task status:", task.status);
+}
+
   });
 
   // Enable dropping into columns
@@ -217,22 +266,24 @@ function renderTasks(tasks) {
 function moveTask(id, status) {
   db.collection("tasks").doc(id).update({ status });
 }
-
-// Delete Task
-function deleteTask(id) {
-  db.collection("tasks").doc(id).delete();
-}
-
-// Helper functions
 function getNextStatus(currentStatus) {
+  if (!currentStatus || typeof currentStatus !== "string") {
+    console.warn("⚠️ getNextStatus called with invalid status:", currentStatus);
+    return "inprogress"; // default next status
+  }
+
   const statusFlow = ["todo", "inprogress", "done"];
   const currentIndex = statusFlow.indexOf(currentStatus.toLowerCase());
   return currentIndex < statusFlow.length - 1
     ? statusFlow[currentIndex + 1]
     : statusFlow[0];
 }
-
 function getStatusButtonText(status) {
+  if (!status || typeof status !== "string") {
+    console.warn("⚠️ getStatusButtonText called with invalid status:", status);
+    return "Move";
+  }
+
   return (
     {
       todo: "Start Progress →",
@@ -241,6 +292,7 @@ function getStatusButtonText(status) {
     }[status.toLowerCase()] || "Move"
   );
 }
+
 
 function searchTasks() {
   let input = document.getElementById("search").value.toLowerCase();
@@ -260,3 +312,4 @@ function deleteTask(id) {
     db.collection("tasks").doc(id).delete();
   }
 }
+
