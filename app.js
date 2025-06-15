@@ -166,7 +166,7 @@ function loadTasks() {
 
   taskUnsubscribe = db
     .collection("tasks")
-    .where("userId", "==", user.uid) s
+    .where("userId", "==", user.uid) 
     .onSnapshot((snapshot) => {
       let tasks = [];
       snapshot.forEach((doc) => {
